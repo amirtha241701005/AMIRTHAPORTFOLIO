@@ -1,0 +1,75 @@
+import { useEffect, useRef } from 'react'
+
+const COLORS = ['#61f2ff', '#78e06b', '#ffd56a', '#84cfff', '#b084ff']
+
+export function useParticles() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const COUNT = window.innerWidth < 800 ? 28 : 52
+    let pts = []
+    let rafId
+    let lastT = 0
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      canvas.width  = window.innerWidth  * dpr
+      canvas.height = window.innerHeight * dpr
+      canvas.style.width  = window.innerWidth  + 'px'
+      canvas.style.height = window.innerHeight + 'px'
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+
+    function seed() {
+      pts = Array.from({ length: COUNT }, () => ({
+        x:    Math.random() * window.innerWidth,
+        y:    Math.random() * window.innerHeight,
+        vx:   (Math.random() - 0.5) * 0.16,
+        vy:   -0.14 - Math.random() * 0.28,
+        sz:   1 + Math.random() * 1.5,
+        op:   0.15 + Math.random() * 0.45,
+        c:    COLORS[Math.floor(Math.random() * COLORS.length)],
+        life: 0.004 + Math.random() * 0.003,
+        age:  Math.random(),
+      }))
+    }
+
+    function draw(ts) {
+      if (ts - lastT < 16.67) { rafId = requestAnimationFrame(draw); return }
+      lastT = ts
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      for (const p of pts) {
+        p.age += p.life
+        if (p.age >= 1) { p.x = Math.random() * window.innerWidth; p.y = window.innerHeight + 4; p.age = 0 }
+        p.x += p.vx; p.y += p.vy
+        ctx.globalAlpha = p.op * Math.sin(p.age * Math.PI)
+        ctx.fillStyle = p.c
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.sz), Math.ceil(p.sz))
+      }
+      ctx.globalAlpha = 1
+      rafId = requestAnimationFrame(draw)
+    }
+
+    resize()
+    seed()
+
+    let resizeTimer
+    const onResize = () => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => { resize(); seed() }, 200)
+    }
+    window.addEventListener('resize', onResize, { passive: true })
+    rafId = requestAnimationFrame(draw)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [])
+
+  return canvasRef
+}

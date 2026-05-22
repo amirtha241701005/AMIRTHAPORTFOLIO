@@ -1,0 +1,85 @@
+import { useState, lazy, Suspense } from 'react'
+import { useScrollReveal } from './hooks/useInView.js'
+import Loader   from './components/Loader.jsx'
+import Cursor   from './components/Cursor.jsx'
+import Nav      from './components/Nav.jsx'
+import Minimap  from './components/Minimap.jsx'
+import Hero     from './components/Hero.jsx'
+
+// Lazy-load below-fold sections for faster initial paint
+const About        = lazy(() => import('./components/About.jsx'))
+const Projects     = lazy(() => import('./components/Projects.jsx'))
+const Achievements = lazy(() => import('./components/Achievements.jsx'))
+const Contact      = lazy(() => import('./components/Contact.jsx'))
+
+function ScrollReveal() {
+  useScrollReveal()
+  return null
+}
+
+function Footer() {
+  const links = [
+    { id: 'hero',         label: 'Home'    },
+    { id: 'about',        label: 'About'   },
+    { id: 'projects',     label: 'Works'   },
+    { id: 'achievements', label: 'XP'      },
+    { id: 'contact',      label: 'Contact' },
+  ]
+  return (
+    <footer className="site-footer">
+      <div className="footer-inner">
+        <div className="footer-logo">AR.WORLD</div>
+        <nav className="footer-links" aria-label="Footer navigation">
+          {links.map(l => (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              className="footer-link"
+              onClick={e => { e.preventDefault(); document.getElementById(l.id)?.scrollIntoView({ behavior: 'smooth' }) }}
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+        <p className="footer-copy">© 2026 Amirtha Rengavathi · Built with care.</p>
+      </div>
+    </footer>
+  )
+}
+
+export default function App() {
+  const [appReady, setAppReady] = useState(false)
+
+  return (
+    <>
+      {/* Always-on cursor */}
+      <Cursor />
+
+      {/* Loader — hides when done */}
+      {!appReady && <Loader onDone={() => setAppReady(true)} />}
+
+      {/* Main site — mounted but hidden until loader done */}
+      <div
+        className="app-root"
+        style={{ visibility: appReady ? 'visible' : 'hidden' }}
+      >
+        <ScrollReveal />
+        <Nav />
+        <Minimap />
+
+        <main>
+          <Hero />
+
+          <Suspense fallback={<div className="section-placeholder" />}>
+            <About />
+            <Projects />
+            <Achievements />
+            <Contact />
+          </Suspense>
+        </main>
+
+        <Footer />
+      </div>
+    </>
+  )
+}
